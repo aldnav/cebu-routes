@@ -1,5 +1,8 @@
 from bs4 import BeautifulSoup
 from collections import OrderedDict
+from Queue import Queue
+from threading import Thread, Lock
+import threading
 import requests
 import logging
 import json
@@ -10,7 +13,9 @@ proxies = {
     'https':'https://112.199.65.186:3128',
     'https':'https://116.93.58.85:8080',
 }
-codes = []
+codes = Queue()
+lock = Lock()
+pool = []
 
 def get_codes():
 	r = requests.get(base_url)
@@ -18,15 +23,20 @@ def get_codes():
 	listing = soup.findAll('ul', {'class', 'wsite-menu-default'})[0].contents
 	global codes
 	for item in listing:
-		codes.append(item.a.text)
+		codes.put(item.a.text)
 
-def scrape():
+def dist():
 	global codes
-	for code in codes:
-		r = requests.get(base_url+code+'.html', proxies=proxies)
-		r.encoding = 'utf-8'
-		if r.status_code == requests.codes.ok:
-			get_details(r, code)
+	with lock:
+	# 	code = codes.get()
+	# print threading.currentThread().name + ' - ' + code
+	scrape(code)
+
+def scrape(code):
+	r = requests.get(base_url+code+'.html', proxies=proxies)
+	r.encoding = 'utf-8'
+	if r.status_code == requests.codes.ok:
+		get_details(r, code)
 
 def get_details(r, code):
 	soup = BeautifulSoup(r.text)
@@ -52,7 +62,15 @@ def log(data):
 
 def main():
 	get_codes()
-	scrape()
+	
+	global codes
+	for i in xrange(codes.qsize()):
+		pool.append(Thread(target=dist))
+	for worker in pool:
+		worker.start()
+
+	for worker in pool:
+		worker.join()
 
 if __name__ == '__main__':
 	main()
