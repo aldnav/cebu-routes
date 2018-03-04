@@ -7,7 +7,10 @@ import requests
 import logging
 import json
 
-logging.basicConfig(filename='cebujeepneys.log', level=logging.WARNING, format='%(message)s')
+logging.basicConfig(
+    filename='cebujeepneys.log',
+    level=logging.WARNING,
+    format='%(message)s')
 base_url = 'http://cebujeepneys.weebly.com/'
 proxies = {
     'https':'https://112.199.65.186:3128',
